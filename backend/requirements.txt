@@ -1,0 +1,71 @@
+# FacePrep Backend - Final Production Requirements
+# Generated: January 06, 2026
+# Status: ✅ PRODUCTION READY - Video Generation Tested & Working
+
+# ============================================
+# Framework & API
+# ============================================
+Flask==2.3.2
+Flask-CORS==4.0.0
+python-dotenv==1.0.0
+Werkzeug==2.3.7
+gunicorn==21.2.0
+
+# ============================================
+# Deep Learning & ML
+# ============================================
+torch==2.0.0
+torchvision==0.15.0
+tensorflow==2.13.0
+
+# ============================================
+# Image Processing
+# ============================================
+opencv-python==4.8.1.78
+Pillow==10.0.0
+mediapipe==0.8.11
+face-recognition==1.3.5
+dlib==19.24.1
+
+# ============================================
+# Audio Processing (WAV2LIP OPTIMIZED)
+# ============================================
+librosa==0.8.1
+resampy==0.4.2
+soundfile==0.12.1
+scipy==1.7.3
+pydub==0.25.1
+
+# ============================================
+# Text-to-Speech & Speech-to-Text
+# ============================================
+gTTS==2.3.2
+edge-tts==7.2.7
+pyttsx3==2.90
+google-cloud-speech==2.21.0
+google-cloud-texttospeech==2.14.0
+elevenlabs==2.39.0
+
+# ============================================
+# Video & Media Processing
+# ============================================
+moviepy==1.0.3
+imageio==2.33.0
+imageio-ffmpeg==0.4.9
+
+# ============================================
+# Document Processing
+# ============================================
+python-pptx==0.6.21
+
+# ============================================
+# Core Scientific & Utilities
+# ============================================
+numpy==1.21.6
+requests==2.31.0
+tqdm==4.66.1
+
+# ============================================
+# Development (Optional)
+# ============================================
+pytest==7.4.0
