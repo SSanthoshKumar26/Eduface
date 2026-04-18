@@ -1,0 +1,337 @@
+.study-notes-container {
+  background: #ffffff;
+  color: #1a1a1a; /* Academic contrast */
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  font-family: 'Inter', system-ui, sans-serif;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.study-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 24px;
+}
+
+.notes-title-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.notes-icon {
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.notes-main-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.notes-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.notes-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.notes-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.notes-overview-box {
+  background: #f8fafc;
+  border-left: 4px solid #2563eb;
+  padding: 24px;
+  border-radius: 4px 12px 12px 4px;
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.box-badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: #2563eb;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.notes-overview-text {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #334155;
+  font-style: italic;
+}
+
+.notes-section-item {
+  margin-bottom: 60px;
+}
+
+.notes-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-num {
+  background: #0f172a;
+  color: white;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.notes-section-content {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #475569;
+  margin-bottom: 24px;
+  white-space: pre-wrap;
+}
+
+.notes-section-extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.notes-feature-block {
+  padding: 20px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.notes-feature-block h3 {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.notes-feature-block ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.notes-feature-block li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.key-points { border-top: 4px solid #10b981; }
+.key-points h3 { color: #10b981; }
+
+.examples { border-top: 4px solid #f59e0b; }
+.examples h3 { color: #f59e0b; }
+
+.diagram { border-top: 4px solid #6366f1; background: #f5f3ff; border-color: #6366f1; }
+.diagram h3 { color: #4f46e5; }
+.diagram-desc {
+  font-size: 0.85rem;
+  color: #4338ca;
+  line-height: 1.5;
+}
+
+.notes-summary-footer {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 2px dashed #e2e8f0;
+}
+
+.final-summary-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 24px;
+}
+
+.summary-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.summary-pill {
+  background: #f1f5f9;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+
+.summary-pill svg {
+  margin-top: 3px;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+/* Dark mode adjustments if needed */
+.dark-theme .study-notes-container {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-theme .notes-main-title { color: #f8fafc; }
+.dark-theme .notes-section-title { color: #f8fafc; }
+.dark-theme .notes-section-content { color: #cbd5e1; }
+.dark-theme .notes-overview-box { background: #0f172a; }
+.dark-theme .summary-pill { background: #0f172a; color: #94a3b8; }
+
+/* CTA Card for Study Notes in Dashboard */
+.ld-notes-cta-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 30px;
+  margin-bottom: 30px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.ld-notes-cta-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.ld-notes-cta-card:hover {
+  transform: translateY(-5px);
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.ld-notes-cta-card:hover::before {
+  opacity: 1;
+}
+
+.cta-icon-box.notes-bg {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+  z-index: 1;
+}
+
+.ld-notes-cta-card .cta-content {
+  flex: 1;
+  z-index: 1;
+}
+
+.ld-notes-cta-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+}
+
+.ld-notes-cta-card p {
+  margin: 0 0 20px 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  max-width: 500px;
+}
+
+.ld-notes-generate-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ld-notes-generate-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+.ld-notes-generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.notes-ready-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}

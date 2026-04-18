@@ -1,0 +1,44 @@
+/* src/styles/About.css */
+
+.about-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+  color: #1a202c;
+}
+
+.about-container h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #667eea;
+  text-align: center;
+}
+
+.about-container p {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  opacity: 0.85;
+}
+
+.about-container h3 {
+  font-size: 1.75rem;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: #764ba2;
+}
+
+@media (max-width: 768px) {
+  .about-container {
+    padding: 1rem;
+  }
+
+  .about-container h2 {
+    font-size: 2rem;
+  }
+
+  .about-container h3 {
+    font-size: 1.5rem;
+  }
+}

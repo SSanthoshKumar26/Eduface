@@ -1,0 +1,326 @@
+/* QuizReviewLive.css - Cinematic Immersive AI Experience */
+:root {
+  --cinematic-accent: #3b82f6;
+  --cinematic-bg: #030712;
+  --cinematic-text: #f1f5f9;
+}
+
+.qrl-page-root {
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: var(--cinematic-text);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+/* Dynamic Ambient Background */
+.qrl-ambient-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, #1e293b 0%, #030712 100%);
+  z-index: -1;
+}
+
+.qrl-glow-orb {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orbMove 15s infinite alternate ease-in-out;
+}
+
+@keyframes orbMove {
+  from { transform: translate(-20%, -20%); }
+  to { transform: translate(20%, 20%); }
+}
+
+/* Immersive Overlay */
+.qrl-top-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.qrl-ai-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.qrl-pulse {
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  box-shadow: 0 0 15px #3b82f6;
+  animation: pulseLight 2s infinite;
+}
+
+@keyframes pulseLight {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Stage - Optimized for Content Flow with Professional Padding */
+.qrl-stage {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  position: relative;
+  z-index: 10;
+}
+
+.qrl-scene {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Advanced Cinematic Animations */
+.scene-enter {
+  opacity: 0;
+  transform: translateY(40px) scale(0.9) rotateX(-10deg);
+  filter: blur(10px);
+}
+
+.scene-active {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotateX(0deg);
+  filter: blur(0);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scene-exit {
+  opacity: 0;
+  transform: translateY(-40px) scale(1.1);
+  filter: blur(10px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tipography & Content Container (Professional Gaps) */
+.qrl-content-container {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  padding: 60px 80px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 32px;
+  box-shadow: inset 0 0 40px rgba(59, 130, 246, 0.03);
+}
+
+.qrl-content-text {
+  font-size: 1.85rem; /* Balanced for multi-line readability */
+  font-weight: 500;
+  line-height: 1.75; 
+  color: #f1f5f9;
+  letter-spacing: 0.01em;
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  word-spacing: normal;
+  white-space: pre-wrap; 
+  overflow-wrap: break-word; /* Better than word-break for whole words */
+  word-break: normal; /* Restore normal behavior to prevent mid-word breaks */
+  max-width: 100%; 
+}
+
+.qrl-word-reveal {
+  display: inline;
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(4px);
+  animation: wordReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.qrl-word-spacer {
+  display: inline;
+  font-size: 1.5rem; /* Ensure space has volume */
+}
+
+@keyframes wordReveal {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* Neural Evaluation Scan Line Refined */
+.qrl-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.05) 50%, transparent);
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
+  z-index: 5;
+  pointer-events: none;
+  animation: scanning 3s infinite ease-in-out;
+}
+
+@keyframes scanning {
+  0% { top: 0%; opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.qrl-sub-text {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 32px;
+  line-height: 1.6;
+}
+
+/* Result Feedback (embedded in text) */
+.qrl-result-glow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 24px;
+  background: rgba(255,255,255,0.05);
+}
+
+.res-success { color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.res-error { color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Interaction Controls - Always at bottom */
+.qrl-controls {
+  padding: 40px 0 80px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(to top, var(--cinematic-bg), transparent);
+  width: 100%;
+  z-index: 20;
+}
+
+.qrl-next-btn {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 18px 48px;
+  border-radius: 100px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s;
+}
+
+.qrl-next-btn:hover {
+  transform: scale(1.05);
+  background: var(--cinematic-accent);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+}
+
+.qrl-skip-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.qrl-skip-btn:hover { color: #fff; }
+
+/* Progress Bar */
+.qrl-progress-path {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: var(--cinematic-accent);
+  transition: width 0.6s ease;
+}
+
+/* Thinking Scene */
+.qrl-thinking-vibe {
+  display: flex;
+  flex-direction: column;
+  items: center;
+  gap: 20px;
+}
+
+.vibe-circles {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.vibe-circles span {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cinematic-accent);
+  border-radius: 50%;
+  animation: vibeScale 1.4s infinite;
+}
+
+.vibe-circles span:nth-child(2) { animation-delay: 0.2s; }
+.vibe-circles span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes vibeScale {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.8); opacity: 1; border-color: #fff; }
+}
+
+/* Summary View */
+.qrl-summary-scene {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  text-align: left;
+}
+
+.qrl-sum-card {
+  padding: 30px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 24px;
+}
+
+.qrl-sum-card h4 {
+  color: var(--cinematic-accent);
+  margin-bottom: 20px;
+}

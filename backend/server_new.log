@@ -1,0 +1,25 @@
+﻿  [SUCCESS] pydub configured with ffmpeg at: E:\eduf\eduf\backend\Wav2Lip\ffmpeg.exe
+[SUCCESS] Video generation pipeline initialized
+
+============================================================
+≡ƒÜÇ FACEPREP - AI PRESENTATION & VIDEO GENERATOR
+============================================================
+[SUCCESS] Ollama is running (http://localhost:11434)
+[*] Available models: ['llama3.2', 'tinyllama']
+[WARNING] llama3.2:1b not found. Run: ollama pull llama3.2:1b
+
+[STATUS] Image API Status:
+  [MISSING] Unsplash API
+  [MISSING] Pexels API
+  [MISSING] Pixabay API
+
+[STATUS] Video Generation Status:
+  [SUCCESS] Video generation modules loaded
+  [SUCCESS] Video pipeline initialized
+
+[SUCCESS] Server ready!
+[SUCCESS] Running on: http://localhost:5000
+============================================================
+
+ * Serving Flask app 'app'
+ * Debug mode: on

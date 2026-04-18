@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "E:\Eduface\Eduface\backend\app.py", line 67, in <module>
+    video_pipeline = VideoPipeline(output_dir=OUTPUT_DIR)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Eduface\Eduface\backend\video_processor\pipeline.py", line 26, in __init__
+    self.tts_engine = TTSEngine()
+                      ^^^^^^^^^^^
+  File "E:\Eduface\Eduface\backend\video_processor\tts_engine.py", line 16, in __init__
+    print(f"  \u2705 pydub configured with ffmpeg at: {ffmpeg_exe}")
+  File "C:\Users\ssanj\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 2: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Eduface\Eduface\backend\app.py", line 70, in <module>
+    print(f"\u26a0\ufe0f  Could not initialize video pipeline: {e}")
+  File "C:\Users\ssanj\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>

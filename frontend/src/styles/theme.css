@@ -1,0 +1,80 @@
+/* ============================================
+   CUSTOM FONTS
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ============================================
+   LIGHT THEME (Default)
+   ============================================ */
+[data-theme="light"],
+:root {
+  --cyan-primary: #00E5FF;
+  --cyan-secondary: #26C6DA;
+  --cyan-tertiary: #00B8D4;
+  --cyan-dark: #009DB3;
+  --accent-purple: #6366F1;
+  --accent-pink: #EC4899;
+  --bg-light: #F8FCFD;
+  --bg-white: #FFFFFF;
+  --text-dark: #0D1B2A;
+  --text-gray: #475B69;
+  --border-light: #D4E8F0;
+  --shadow-light: 0 2px 12px rgba(0, 229, 255, 0.06);
+  --shadow-hover: 0 8px 32px rgba(0, 229, 255, 0.12);
+  
+  /* Custom Fonts */
+  --font-display: "Space Grotesk", sans-serif;
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+/* ============================================
+   DARK THEME
+   ============================================ */
+[data-theme="dark"] {
+  --cyan-primary: #00D9F5;
+  --cyan-secondary: #26C6DA;
+  --cyan-tertiary: #4DD0E1;
+  --cyan-dark: #00ACC1;
+  --accent-purple: #7C3AED;
+  --accent-pink: #EC4899;
+  --bg-light: #0F172A;
+  --bg-white: #1A2332;
+  --text-dark: #F1F5F9;
+  --text-gray: #CBD5E1;
+  --border-light: #334155;
+  --shadow-light: 0 2px 12px rgba(0, 217, 245, 0.08);
+  --shadow-hover: 0 8px 32px rgba(0, 217, 245, 0.16);
+  
+  /* Custom Fonts */
+  --font-display: "Space Grotesk", sans-serif;
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+/* ============================================
+   SMOOTH TRANSITION
+   ============================================ */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ============================================
+   TYPOGRAPHY OVERRIDES
+   ============================================ */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.hero-title,
+.section-title,
+.cge-header h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+body {
+  font-family: var(--font-body);
+}

@@ -1,0 +1,19 @@
+# EduFace specific (VERY IMPORTANT)
+# Uploads (ROOT LEVEL)
+uploads/
+
+backend/uploads/outputs/
+backend/uploads/*
+outputs/
+temp/
+tmp/
+cache/
+
+# Generated scripts / AI outputs
+*.txt
+*.json
+
+# Prevent accidental large files
+*.zip
+*.tar
+*.gz
