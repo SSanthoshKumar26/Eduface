@@ -15,6 +15,7 @@ import QuizAttempt from "./components/quiz/QuizAttempt";
 import QuizResult from "./components/quiz/QuizResult";
 import QuizReview from "./components/quiz/QuizReview";
 import ThinkingMode from "./components/ThinkingMode";
+import StudyPlanner from "./components/StudyPlanner";
 import "./App.css";
 import "./styles/theme.css";
 
@@ -49,6 +50,7 @@ function App() {
           <Route path="/quiz/detailed-review" element={<QuizReview />} />
           <Route path="/thinking-mode/:videoId" element={<ThinkingMode />} />
           <Route path="/thinking-mode" element={<ThinkingMode />} />
+          <Route path="/study-planner" element={<StudyPlanner />} />
         </Routes>
       </Router>
     </ThemeProvider>

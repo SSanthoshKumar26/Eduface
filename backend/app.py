@@ -59,6 +59,12 @@ from io import BytesIO
 from werkzeug.utils import secure_filename
 from openai import OpenAI
 from groq import Groq
+import cv2
+import numpy as np
+
+# MediaPipe for advanced face validation
+try: install_and_import('mediapipe')
+except: pass
 
 # Background removal imports
 try:
@@ -79,9 +85,12 @@ except ImportError:
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Enhanced CORS configuration to allow all headers and methods from any local development port
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True, allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Methods", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers"])
 
 # ============ CONFIGURATION ============
+# Job tracking for cancellation
+CANCELLED_JOBS = set()
 # AI Model Configuration (Ollama)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 AI_MODEL = os.getenv("OLLAMA_MODEL", "tinyllama")
@@ -1128,6 +1137,61 @@ def get_voices():
             "error": str(e)
         }), 500
 
+@app.route("/api/validate-avatar", methods=["POST"])
+def validate_avatar():
+    """Real-time validation of face image using Luxand Cloud API for maximum accuracy"""
+    if 'image' not in request.files:
+        return jsonify({"success": False, "error": "No image uploaded"}), 400
+    
+    luxand_key = os.getenv("LUXAND_API_KEY")
+    if not luxand_key:
+        print("[ERROR] LUXAND_API_KEY missing in .env")
+        return jsonify({"success": False, "error": "Face detection service not configured."}), 500
+
+    file = request.files['image']
+    try:
+        import requests
+        # LUXAND API (Detect Faces)
+        print("[DEBUG] Sending image to Luxand Cloud...")
+        response = requests.post(
+            "https://api.luxand.cloud/photo/detect",
+            headers={"token": luxand_key},
+            files={"photo": file}
+        )
+        
+        if response.status_code != 200:
+            print(f"[ERROR] Luxand API returned {response.status_code}: {response.text}")
+            # If API is down or key invalid, we fallback to a simpler local check or allow
+            return jsonify({"success": False, "error": "Service busy. Try again."}), 200
+            
+        faces = response.json()
+        print(f"[DEBUG] Luxand Result Count: {len(faces)}")
+        
+        if not faces or len(faces) == 0:
+            return jsonify({"success": False, "error": "No face detected. Please upload a clear face photo."}), 200
+            
+        if len(faces) > 1:
+            return jsonify({"success": False, "error": "Please upload an image with only one person."}), 200
+        
+        # Check Orientation (Front-facing)
+        # Luxand Cloud V2 detect returns angles under 'angles' property
+        face = faces[0]
+        angles = face.get('angles', {})
+        yaw = abs(angles.get('yaw', 0))
+        pitch = abs(angles.get('pitch', 0))
+        
+        print(f"[DEBUG] Face Orientation -> Yaw: {yaw}, Pitch: {pitch}")
+        
+        # Luxand angles are in degrees. 20-25 degrees is a safe limit for "front facing"
+        if yaw > 25 or pitch > 25:
+            return jsonify({"success": False, "error": "Please look directly at the camera (front-facing)."}), 200
+
+        return jsonify({"success": True, "message": "Image looks good"})
+        
+    except Exception as e:
+        print(f"[ERROR] Luxand Implementation Error: {str(e)}")
+        return jsonify({"success": False, "error": "Validation failed. Check image quality."}), 200
+
 @app.route("/api/upload-files", methods=["POST"])
 def upload_files():
     """Upload PPT, face image, and optional audio for video generation"""
@@ -1265,8 +1329,12 @@ def generate_video():
         # Function to run in background
         def run_pipeline():
             try:
+                # Define a cancellation check function
+                def check_cancelled():
+                    return job_id in CANCELLED_JOBS
+
                 # Process the video
-                video_pipeline.process(ppt_path, face_path, options, job_id=job_id)
+                video_pipeline.process(ppt_path, face_path, options, job_id=job_id, check_cancelled=check_cancelled)
                 
                 # Write success marker ensuring the file is fully ready
                 try:
@@ -1342,6 +1410,37 @@ def generate_video():
             "traceback": traceback.format_exc()
         }), 500
 
+@app.route("/api/cancel-video/<job_id>", methods=["POST"])
+def cancel_video(job_id):
+    """Cancel an active video generation job and stop all processing"""
+    try:
+        base_path = f'uploads/outputs/{job_id}'
+        
+        # 1. Register job as cancelled globally for the pipeline to see
+        CANCELLED_JOBS.add(job_id)
+        print(f"🛑 REQ: Cancellation triggered for job {job_id}")
+        
+        # 2. Write an error marker informing the process it should stop
+        if os.path.exists(base_path):
+            with open(os.path.join(base_path, 'error.txt'), 'w') as f:
+                f.write("Cancelled by user")
+            
+        # 3. Kill associated processes (like ffmpeg)
+        try:
+            import psutil
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                if 'ffmpeg' in proc.info['name'].lower():
+                    cmdline = " ".join(proc.info['cmdline'] or [])
+                    if job_id in cmdline:
+                        print(f"🛑 Killing rogue ffmpeg process for job {job_id}")
+                        proc.kill()
+        except Exception as e:
+            print(f"⚠️ Process kill error: {e}")
+
+        return jsonify({"success": True, "message": "Job cancellation initiated"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/download-video/<job_id>/<file_type>", methods=["GET"])
 def download_video_file(job_id, file_type):
     """Download generated video files"""
@@ -1359,6 +1458,10 @@ def download_video_file(job_id, file_type):
             file_path = os.path.join(base_path, 'script.txt')
             mimetype = 'text/plain'
             download_name = f'{job_id}_script.txt'
+        elif file_type == 'subtitles':
+            file_path = os.path.join(base_path, 'subtitles.json')
+            mimetype = 'application/json'
+            download_name = f'{job_id}_subtitles.json'
         elif file_type == 'audio':
             file_path = os.path.join(base_path, 'narration.wav')
             
@@ -2492,6 +2595,141 @@ def access_share_code(code):
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-form-assistant', methods=['POST'])
+def ai_form_assistant():
+    data = request.json
+    user_input = data.get('text', '')
+    current_state = data.get('currentState', {})
+    
+    prompt = f"""You are an intelligent form-filling assistant for a Study Planner application.
+
+Your job:
+Convert the user's spoken or typed input into structured JSON data that can be used to auto-fill a form in real time.
+
+IMPORTANT:
+- Output ONLY valid JSON matching the exact keys below
+- Do NOT include explanations
+
+FORM STRUCTURE keys to use (only include fields you want to update):
+- examDate (YYYY-MM-DD)
+- startDate (YYYY-MM-DD)
+- hoursPerDay (number)
+- preferredTime ("Morning", "Afternoon", "Night")
+- breakPreference (string)
+- maxFocusTime (number)
+- stressLevel ("Low", "Medium", "High")
+- targetScore (number)
+- weakSubjects (string, comma separated)
+- strongSubjects (string, comma separated)
+- subjects (array of objects: {{"subjectName": string, "difficulty": "Easy"|"Medium"|"Hard", "completionLevel": number, "totalChapters": number}})
+
+RULES:
+1. Extract info from user input.
+2. If missing, DO NOT include the key in the response.
+3. Convert "next Monday" to an actual upcoming date.
+4. "Physics is hard" -> adds Physics to weakSubjects and sets its subject difficulty to Hard.
+
+CURRENT STATE:
+{json.dumps(current_state)}
+
+USER INPUT:
+{user_input}
+"""
+
+    try:
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key: return jsonify({'error': 'No API key'}), 500
+        client = Groq(api_key=groq_api_key)
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",
+            temperature=0.3,
+            max_tokens=1024,
+            response_format={"type": "json_object"}
+        )
+        return jsonify(json.loads(response.choices[0].message.content))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-study-plan', methods=['POST'])
+def generate_study_plan():
+    data = request.json
+    
+    exam_date = data.get('examDate')
+    start_date = data.get('startDate')
+    hours_per_day = data.get('hoursPerDay')
+    preferred_time = data.get('preferredTime')
+    break_pref = data.get('breakPreference')
+    max_focus = data.get('maxFocusTime')
+    weak_subs = data.get('weakSubjects')
+    strong_subs = data.get('strongSubjects')
+    stress = data.get('stressLevel')
+    target_score = data.get('targetScore')
+    subjects = data.get('subjects', [])
+    
+    subject_details = ""
+    for s in subjects:
+        subj_name = s.get('subjectName', 'Subject')
+        subj_topics = s.get('topics', '').strip()
+        if subj_topics:
+            subject_details += f"- {subj_name}: {subj_topics}\n"
+        else:
+            subject_details += f"- {subj_name}: General session (No topics provided)\n"
+        
+    prompt = f"""You are an expert academic planner.
+Create a study plan. 
+STRICT RULE: ONLY use topics listed below for each subject. DO NOT invent topics. 
+If no topics are listed, use 'General Review & Practice' for that subject.
+
+Student Profile:
+- Start: {start_date}
+- Exam: {exam_date}
+- Hours: {hours_per_day}
+- Style: {preferred_time}
+
+Subjects Info:
+{subject_details}
+
+Return JSON:
+{{
+  "motivation": "...",
+  "summary": "...",
+  "tips": [],
+  "weeklyStrategy": "...",
+  "revisionPlan": "...",
+  "dailyPlan": [
+    {{
+      "date": "MMM DD, YYYY",
+      "timing": "HH:MM - HH:MM",
+      "topic": "...",
+      "studyType": "...",
+      "lecture": "...",
+      "status": "Not Started"
+    }}
+  ]
+}}
+"""
+
+    try:
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            return jsonify({'error': 'GROQ API key configured improperly'}), 500
+            
+        client = Groq(api_key=groq_api_key)
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",
+            temperature=0.7,
+            max_tokens=2048,
+            response_format={"type": "json_object"}
+        )
+        plan_text = response.choices[0].message.content
+        plan_data = json.loads(plan_text)
+        return jsonify({'success': True, 'plan': plan_data})
+    except Exception as e:
+        print(f"Error generating study plan: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============ START SERVER ============
 if __name__ == "__main__":

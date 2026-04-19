@@ -154,6 +154,11 @@ def _force_fps(clip, fps=DEFAULT_FPS):
     return clip
 
 
+class JobCancelledException(Exception):
+    """Raised when a video job is cancelled by the user"""
+    pass
+
+
 class VideoPipeline:
 
     def __init__(self, output_dir='uploads/outputs'):
@@ -181,9 +186,14 @@ class VideoPipeline:
     # MAIN PIPELINE
     # ─────────────────────────────────────────────────────────────────
 
-    def process(self, ppt_path, face_path, options=None, job_id=None):
+    def process(self, ppt_path, face_path, options=None, job_id=None, check_cancelled=None):
         if options is None:
             options = {}
+            
+        def verify_not_cancelled():
+            if check_cancelled and check_cancelled():
+                print(f"🛑 RECOGNIZED: Job {job_id} was cancelled. Terminating pipeline.")
+                raise JobCancelledException("Job was cancelled by the user")
 
         voice_id    = options.get('voice_id',    'edge_aria')
         slang_level = options.get('slang_level', 'medium')
@@ -214,6 +224,7 @@ class VideoPipeline:
         }
 
         try:
+            verify_not_cancelled()
             # ── STEP 1: PPT Extraction ─────────────────────────────
             self._update_progress(job_dir, 10, "Extracting PPT content")
             extractor  = PPTExtractor(ppt_path)
@@ -227,6 +238,7 @@ class VideoPipeline:
             results['steps']['extraction'] = 'completed'
 
             # ── STEP 2: Face Preprocessing ─────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 20, "Preprocessing avatar (BG Removal)")
             is_valid, msg = self.face_processor.validate_image(face_path)
             if not is_valid:
@@ -243,6 +255,7 @@ class VideoPipeline:
             #  video so Wav2Lip has a *moving* face to work with — giving us
             #  realistic eye blinks, eyebrow lifts and head micro-motion on top
             #  of the lip sync that Wav2Lip already provides.
+            verify_not_cancelled()
             self._update_progress(job_dir, 28, "Generating facial animations")
 
             if processed_face.lower().endswith('.png'):
@@ -271,6 +284,7 @@ class VideoPipeline:
                 face_for_lipsync = processed_face
 
             # ── STEP 3: Script Generation ──────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 35, "Generating narrations")
             scripts = self.text_processor.format_for_speech_per_slide(
                 slides_data, slang_level)
@@ -300,9 +314,11 @@ class VideoPipeline:
             results['steps']['script']    = 'completed'
 
             # ── STEP 4: TTS Audio ──────────────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 50, "Synthesizing voice")
             audio_files = []
             for i, script in enumerate(scripts):
+                verify_not_cancelled()
                 audio_path = os.path.join(job_dir, f'audio_{i:03d}.wav')
                 af = self.tts_engine.generate_audio_with_fallback(
                     script, audio_path, tts_engine, voice_id)
@@ -314,9 +330,11 @@ class VideoPipeline:
             results['steps']['audio'] = 'completed'
 
             # ── STEP 5: LipSync ────────────────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 65, "Neural lip-syncing")
             lipsync_videos = []
             for i, audio in enumerate(audio_files):
+                verify_not_cancelled()
                 ls_out = os.path.join(job_dir, f'lipsync_{i:03d}.mp4')
                 vp, msg = self.lipsync_generator.generate_video(
                     face_for_lipsync, audio, ls_out, quality=quality)
@@ -326,11 +344,13 @@ class VideoPipeline:
             results['steps']['lipsync'] = 'completed'
 
             # ── STEP 6: Final Composition ──────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 85, "Compositing HD video")
 
             final_clips  = []
             current_time = 0.0
             script_ts    = []
+            subtitles    = [] # Tracking for live subtitles
 
             # Pre-load face mask to avoid re-loading for every slide
             face_mask_obj = None
@@ -361,6 +381,15 @@ class VideoPipeline:
                 # ── Timestamp for script ──
                 mins, secs = int(current_time // 60), int(current_time % 60)
                 script_ts.append(f"[{mins:02d}:{secs:02d}] {scripts[i]}")
+
+                # ── Extract text for subtitles ──
+                pure_text = self.tts_engine._extract_text_from_script(scripts[i])
+                subtitles.append({
+                    'start': current_time,
+                    'duration': duration,
+                    'text': pure_text
+                })
+
                 current_time += duration
 
                 # ── Background ──
@@ -419,7 +448,17 @@ class VideoPipeline:
             with open(script_path, 'w', encoding='utf-8') as f:
                 f.write('\n\n'.join(script_ts))
 
+            # ── Save subtitles.json for the frontend ──
+            try:
+                import json
+                subtitles_path = os.path.join(job_dir, 'subtitles.json')
+                with open(subtitles_path, 'w', encoding='utf-8') as f:
+                    json.dump(subtitles, f)
+            except Exception as se:
+                print(f"  [WARN] Could not save subtitles: {se}")
+
             # ── Concatenate ───────────────────────────────────────
+            verify_not_cancelled()
             self._update_progress(job_dir, 95, "Assembling final clips")
 
             print(f"  [EXPORT] Found {len(final_clips)} composite clips. Starting concatenation...")
@@ -440,6 +479,7 @@ class VideoPipeline:
                     print(f"  [WARN] Could not write combined narration: {ae}")
 
             # ── Export ──────────────────────────────────────────────────
+            verify_not_cancelled()
             output_file = os.path.join(job_dir, 'final_lesson.mp4')
             
             self._update_progress(job_dir, 98, "Compiling final MP4")
@@ -479,6 +519,11 @@ class VideoPipeline:
             results['final_video']                 = output_file
             results['steps']['finalization']       = 'completed'
 
+        except JobCancelledException as jce:
+            print(f"🛑 RECOGNIZED: Pipeline exited early for job {job_id}")
+            results['status'] = 'cancelled'
+            results['error']  = "Job cancelled by user"
+            
         except Exception as e:
             import traceback
             traceback.print_exc()

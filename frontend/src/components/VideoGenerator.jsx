@@ -52,13 +52,16 @@ const VideoGenerator = () => {
   const [quality, setQuality] = useState('medium');
   const [ttsEngine, setTtsEngine] = useState('edge');
   
-  // Process states
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Advanced Image Validation State Machine: 'idle' | 'validating' | 'valid' | 'invalid'
+  const [imgState, setImgState] = useState('idle');
+  const [imgErrorMsg, setImgErrorMsg] = useState('');
   
   // Result states
   const [videoUrl, setVideoUrl] = useState(null);
@@ -284,6 +287,29 @@ const VideoGenerator = () => {
     if (file) setPptFile(file);
   };
 
+  const validateImage = async (file) => {
+    setImgState('validating');
+    setImgErrorMsg('AI is analyzing your photo...');
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/validate-avatar`, formData);
+      if (res.data.success) {
+        setImgState('valid');
+        setImgErrorMsg(res.data.message);
+      } else {
+        setImgState('invalid');
+        setImgErrorMsg(res.data.error);
+      }
+    } catch (err) {
+      console.error("Validation error:", err);
+      setImgState('invalid');
+      setImgErrorMsg("Connection error during validation.");
+    }
+  };
+
   const handleFaceChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -291,6 +317,7 @@ const VideoGenerator = () => {
       const reader = new FileReader();
       reader.onloadend = () => setFacePreview(reader.result);
       reader.readAsDataURL(file);
+      validateImage(file);
     }
   };
 
@@ -337,6 +364,7 @@ const VideoGenerator = () => {
         .then(blob => {
           const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
           setFaceImage(file);
+          validateImage(file);
         });
         
       stopCamera();
@@ -386,7 +414,14 @@ const VideoGenerator = () => {
     }
   };
 
-  const handleCancelJob = () => {
+  const handleCancelJob = async () => {
+    if (activeJobId && activeJobId !== 'generating_sync') {
+      try {
+        await axios.post(`${API_BASE_URL}/api/cancel-video/${activeJobId}`);
+      } catch (e) {
+        console.error("Failed to notify backend of cancellation", e);
+      }
+    }
     localStorage.removeItem('eduface_active_job');
     setActiveJobId(null);
     setLoading(false);
@@ -590,6 +625,11 @@ const VideoGenerator = () => {
                         </div>
 
                         <div className="vg-face-content">
+                          <div className="vg-face-instructions">
+                            <p className="vg-instruction-main">Upload a clear, front-facing photo of your face</p>
+                            <p className="vg-instruction-helper">Good lighting • One person only • No side angles</p>
+                          </div>
+
                           {faceInputMode === 'upload' && (
                             <div className="vg-upload-area">
                               <input type="file" id="face-upload" className="vg-cyber-input vg-hidden-file" accept="image/png, image/jpeg, image/jpg" onChange={handleFaceChange} />
@@ -601,7 +641,11 @@ const VideoGenerator = () => {
                                 </label>
                               ) : (
                                 <div className="vg-preview-area">
-                                  <img src={facePreview} alt="Avatar Preview" className="vg-video-preview" />
+                                  <img 
+                                    src={facePreview} 
+                                    alt="Avatar Preview" 
+                                    className={`vg-video-preview state-${imgState}`} 
+                                  />
                                   <div className="vg-camera-actions">
                                     <label htmlFor="face-upload" className="vg-btn-secondary">
                                       <RefreshCcw size={16} /> Choose Another
@@ -626,7 +670,11 @@ const VideoGenerator = () => {
                                 {!capturedImage && <div className="vg-face-guide" />}
                                 
                                 {capturedImage && facePreview && (
-                                  <img src={facePreview} alt="Captured" className="vg-video-preview" />
+                                  <img 
+                                    src={facePreview} 
+                                    alt="Captured" 
+                                    className={`vg-video-preview state-${imgState}`} 
+                                  />
                                 )}
                               </div>
                               
@@ -650,6 +698,14 @@ const VideoGenerator = () => {
                               </div>
                             </div>
                           )}
+
+                          {imgState !== 'idle' && (
+                            <div className={`vg-face-validation-badge ${imgState}`}>
+                              {imgState === 'validating' ? <RefreshCcw className="ld-spin" size={14} /> : 
+                               imgState === 'invalid' ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
+                              <span>{imgErrorMsg}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -660,7 +716,10 @@ const VideoGenerator = () => {
                   <div className="vg-card-header"><h2>Step 2: Configuration</h2></div>
                   <div className="vg-card-body">
                     <div className="vg-form-group">
-                      <label className="vg-label">AI Voice Persona</label>
+                      <label className="vg-label">
+                        <Volume2 size={16} className="text-cyan-400 mr-2" />
+                        AI Voice Persona
+                      </label>
                       <select className="vg-cyber-input" value={selectedVoice} onChange={(e) => {
                         const vid = e.target.value;
                         setSelectedVoice(vid);
@@ -678,27 +737,64 @@ const VideoGenerator = () => {
                     </div>
 
                     <div className="vg-form-group">
-                      <label className="vg-label">Educational Tone</label>
+                      <label className="vg-label">
+                        <Sparkles size={16} className="text-cyan-400 mr-2" />
+                        Educational Tone
+                      </label>
                       <select className="vg-cyber-input" value={slangLevel} onChange={(e) => setSlangLevel(e.target.value)}>
-                        <option value="none">Professional</option>
-                        <option value="medium">Conversational</option>
+                        <option value="none">Professional (Formal)</option>
+                        <option value="medium">Conversational (Engaging)</option>
+                        <option value="high">Dynamic (Interactive)</option>
                       </select>
                     </div>
 
                     <div className="vg-form-group">
-                      <label className="vg-label">Video Quality</label>
+                      <label className="vg-label">
+                        <Zap size={16} className="text-cyan-400 mr-2" />
+                        Video Quality
+                      </label>
                       <select className="vg-cyber-input" value={quality} onChange={(e) => setQuality(e.target.value)}>
-                        <option value="low">Standard (Fast)</option>
-                        <option value="medium">High Definition</option>
-                        <option value="high">Elite (Slow)</option>
+                        <option value="low">Standard (Fast Processing)</option>
+                        <option value="medium">High Definition (Balanced)</option>
+                        <option value="high">Ultra High (Neural Rendering)</option>
                       </select>
+                      <small className="vg-form-help">Determines the AI's render resolution and facial consistency.</small>
+                    </div>
+
+                    {/* Dynamic Strategy Summary to fill the gap */}
+                    <div className="vg-strategy-summary">
+                      <div className="vg-strategy-header">
+                        <Sparkles size={14} />
+                        <span>Generation Strategy</span>
+                      </div>
+                      <div className="vg-strategy-content">
+                        <div className="vg-strategy-item">
+                          <CheckCircle2 size={12} className="text-green-400" />
+                          <span>Voice: <strong>{voices.find(v=>v.id===selectedVoice)?.name || 'Default'}</strong></span>
+                        </div>
+                        <div className="vg-strategy-item">
+                          <CheckCircle2 size={12} className="text-green-400" />
+                          <span>Tone: <strong>{slangLevel === 'none' ? 'Professional' : slangLevel === 'medium' ? 'Conversational' : 'Dynamic'}</strong></span>
+                        </div>
+                        <div className="vg-strategy-item">
+                          <CheckCircle2 size={12} className="text-green-400" />
+                          <span>Output: <strong>{quality === 'low' ? 'Standard Definition' : quality === 'medium' ? 'Full HD 1080p' : 'Ultra High Fidelity'}</strong></span>
+                        </div>
+                        <div className="vg-strategy-footer">
+                          Ready to synthesize your AI tutor.
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="vg-button-wrapper" style={{ marginBottom: '4rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <button onClick={handleGenerate} disabled={loading || !pptFile || !faceImage} className="vg-cyber-button">
+                <button 
+                  onClick={handleGenerate} 
+                  disabled={loading || !pptFile || !faceImage || imgState !== 'valid'} 
+                  className={`vg-cyber-button ${imgState === 'invalid' ? 'blocked' : ''}`}
+                >
                   Generate AI Lesson
                 </button>
                 {(pptFile || faceImage) && (

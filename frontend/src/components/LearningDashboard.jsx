@@ -61,6 +61,9 @@ const LearningDashboard = ({
   const [hoverX, setHoverX] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showSubtitles, setShowSubtitles] = useState(false);
+  const [subtitles, setSubtitles] = useState([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState("");
   
   const videoRef = useRef(null);
   
@@ -229,6 +232,34 @@ const LearningDashboard = ({
       setChapters(generatedChapters);
     }
   }, [duration]);
+
+  // --- SUBTITLES FETCH & TRACKING ---
+  const subtitlesUrl = jobId ? `${API_BASE_URL}/api/download-video/${jobId}/subtitles` : null;
+
+  useEffect(() => {
+    if (subtitlesUrl) {
+      console.log("🔍 Fetching subtitles from:", subtitlesUrl);
+      axios.get(subtitlesUrl)
+        .then(res => {
+          if (Array.isArray(res.data)) {
+            console.log("✅ Subtitles loaded:", res.data.length, "segments");
+            setSubtitles(res.data);
+          }
+        })
+        .catch(err => {
+          console.warn("⚠️ Subtitles not found or fetch failed. Subtitles are only available for newly generated videos.", err.message);
+        });
+    }
+  }, [subtitlesUrl]);
+
+  useEffect(() => {
+    if (showSubtitles && subtitles.length > 0) {
+      const active = subtitles.find(s => currentTime >= s.start && currentTime < (s.start + s.duration));
+      setCurrentSubtitle(active ? active.text : "");
+    } else {
+      setCurrentSubtitle("");
+    }
+  }, [currentTime, showSubtitles, subtitles]);
 
   const handleSeek = (time) => {
     if (videoRef.current) {
@@ -492,6 +523,15 @@ const LearningDashboard = ({
                         onEnded={() => setIsPlaying(false)}
                         onClick={togglePlay}
                       />
+
+                      {/* Subtitle Overlay */}
+                      {showSubtitles && currentSubtitle && (
+                        <div className="ld-subtitle-overlay">
+                          <div className="ld-subtitle-text">
+                            {currentSubtitle}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Collapse Button */}
                       <button 
@@ -603,12 +643,7 @@ const LearningDashboard = ({
                                           className={`ld-speed-pill ${playbackRate === speed ? 'active' : ''}`}
                                           onClick={() => handleSpeedChange(speed)}
                                         >
-                                          {speed === 1.0 ? (
-                                            <>
-                                              <span>1.0</span>
-                                              <span className="normal-label">Normal</span>
-                                            </>
-                                          ) : speed}
+                                          {speed}x
                                         </button>
                                       ))}
                                     </div>

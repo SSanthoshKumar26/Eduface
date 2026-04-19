@@ -38,12 +38,14 @@ function Navbar() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Auto-focus input when popover opens
+    // Keyboard accessibility: ESC to close
     useEffect(() => {
-        if (sharePopoverOpen && shareInputRef.current) {
-            setTimeout(() => shareInputRef.current?.focus(), 100);
-        }
-    }, [sharePopoverOpen]);
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') setSharePopoverOpen(false);
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
 
     const toggleMenu = () => setIsOpen((prev) => !prev);
     const handleNavigation = (path) => { navigate(path); setIsOpen(false); };
@@ -85,6 +87,7 @@ function Navbar() {
         { label: 'PPT', path: '/ppt-generator' },
         { label: 'Video', path: '/video-generator' },
         { label: 'Library', path: '/video-gallery' },
+        { label: 'Planner', path: '/study-planner' },
         { label: 'Dashboard', path: '/quiz/result' },
     ];
 
@@ -113,11 +116,11 @@ function Navbar() {
                     {/* Actions */}
                     <div className="navbar-actions">
 
-                        {/* Share Code Icon Button + Popover */}
-                        <div className="share-code-wrapper" ref={popoverRef}>
+                        {/* Share Code Inline Interaction */}
+                        <div className={`inline-share-container ${sharePopoverOpen ? 'active' : ''}`} ref={popoverRef}>
                             <button
-                                className={`share-code-trigger ${sharePopoverOpen ? 'active' : ''}`}
-                                onClick={() => setSharePopoverOpen((p) => !p)}
+                                className="share-code-trigger"
+                                onClick={() => setSharePopoverOpen(true)}
                                 title="Enter a Share Code"
                             >
                                 <Share2 size={16} />
@@ -125,46 +128,35 @@ function Navbar() {
                             </button>
 
                             {sharePopoverOpen && (
-                                <div className="share-code-popover">
-                                    <div className="popover-header">
-                                        <div className="popover-icon-ring">
-                                            <Share2 size={18} />
-                                        </div>
-                                        <div>
-                                            <p className="popover-title">Enter Share Code</p>
-                                            <p className="popover-sub">Access a shared video or gallery</p>
-                                        </div>
-                                    </div>
-                                    <div className="popover-input-row">
-                                        <input
-                                            ref={shareInputRef}
-                                            type="text"
-                                            value={shareCodeInput}
-                                            onChange={(e) => setShareCodeInput(e.target.value.toUpperCase())}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleShareCodeSubmit(); }}
-                                            placeholder="VID-XXXXXXXX or GAL-XXXXXXXX"
-                                            className="popover-input"
-                                            spellCheck={false}
-                                        />
-                                        <button
-                                            className="popover-go-btn"
-                                            onClick={handleShareCodeSubmit}
-                                            disabled={shareLoading || !shareCodeInput.trim()}
-                                        >
-                                            {shareLoading ? (
-                                                <span className="popover-spinner" />
-                                            ) : (
-                                                <ArrowRight size={18} />
-                                            )}
-                                        </button>
-                                    </div>
-                                    <p className="popover-hint">
-                                        <span className="code-pill">VID-</span> for a single video &nbsp;·&nbsp;
-                                        <span className="code-pill">GAL-</span> for a full gallery
-                                    </p>
+                                <div className="inline-share-input-wrapper">
+                                    <input
+                                        ref={shareInputRef}
+                                        type="text"
+                                        value={shareCodeInput}
+                                        onChange={(e) => setShareCodeInput(e.target.value.toUpperCase())}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleShareCodeSubmit(); }}
+                                        placeholder="Enter Code"
+                                        className="inline-share-input"
+                                        spellCheck={false}
+                                        autoFocus
+                                    />
+                                    <button 
+                                        className="inline-submit-btn" 
+                                        onClick={handleShareCodeSubmit}
+                                        disabled={shareLoading || !shareCodeInput.trim()}
+                                    >
+                                        {shareLoading ? <div className="inline-spinner" /> : <ArrowRight size={16} />}
+                                    </button>
+                                    <button 
+                                        className="inline-close-btn" 
+                                        onClick={() => setSharePopoverOpen(false)}
+                                    >
+                                        <X size={14} />
+                                    </button>
                                 </div>
                             )}
                         </div>
+
 
                         <ThemeToggle />
 
@@ -229,10 +221,45 @@ function Navbar() {
                                     </SignOutButton>
                                 </div>
                             </SignedIn>
+                            
+                            <div className={`mobile-join-section ${sharePopoverOpen ? 'active' : ''}`}>
+                                {!sharePopoverOpen ? (
+                                    <button 
+                                        className="mobile-join-button"
+                                        onClick={() => setSharePopoverOpen(true)}
+                                    >
+                                        <Share2 size={18} />
+                                        <span>Join Experience</span>
+                                    </button>
+                                ) : (
+                                    <div className="mobile-inline-input">
+                                        <input
+                                            ref={shareInputRef}
+                                            type="text"
+                                            value={shareCodeInput}
+                                            onChange={(e) => setShareCodeInput(e.target.value.toUpperCase())}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleShareCodeSubmit(); }}
+                                            placeholder="Enter Code"
+                                            spellCheck={false}
+                                            autoFocus
+                                        />
+                                        <div className="mobile-inline-actions">
+                                            <button onClick={handleShareCodeSubmit} disabled={shareLoading}>
+                                                {shareLoading ? <div className="inline-spinner" /> : <ArrowRight size={18} />}
+                                            </button>
+                                            <button onClick={() => setSharePopoverOpen(false)}>
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Modal removed as per user request for inline interaction */}
         </nav>
     );
 }

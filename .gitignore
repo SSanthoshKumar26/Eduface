@@ -1,3 +1,8 @@
+# Environment variables (CRITICAL SECURITY)
+.env
+.env.local
+.env.*.local
+
 # EduFace specific (VERY IMPORTANT)
 # Uploads (ROOT LEVEL)
 uploads/
@@ -11,9 +16,13 @@ cache/
 
 # Generated scripts / AI outputs
 *.txt
+!backend/requirements.txt
 *.json
 
 # Prevent accidental large files
 *.zip
 *.tar
 *.gz
+
+*.exe
+backend/Wav2Lip/
