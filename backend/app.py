@@ -1606,6 +1606,68 @@ def get_user_active_job(user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/chat", methods=["POST"])
+def professional_chat():
+    try:
+        data = request.json
+        messages_arr = data.get('messages', [])
+        
+        GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+        SECONDARY_GROQ_API_KEY = os.getenv("GROQ_API_KEY_2", "").strip()
+        
+        # We use llama-3.1-8b-instant for maximum speed (near-instant response time)
+        MODEL_ID = "llama-3.1-8b-instant"
+
+        # 1. Try Primary Groq
+        if GROQ_API_KEY:
+            try:
+                client = Groq(api_key=GROQ_API_KEY, timeout=5) # 5s timeout for ultra-fast failover
+                completion = client.chat.completions.create(
+                    model=MODEL_ID,
+                    messages=messages_arr,
+                    temperature=0.6,
+                    max_tokens=600
+                )
+                return jsonify({"answer": completion.choices[0].message.content, "source": "groq-primary"})
+            except Exception as e:
+                print(f"Primary Groq failed: {e}")
+
+        # 2. Try Secondary Groq Default (Fallback)
+        if SECONDARY_GROQ_API_KEY:
+            try:
+                client2 = Groq(api_key=SECONDARY_GROQ_API_KEY, timeout=5)
+                completion = client2.chat.completions.create(
+                    model=MODEL_ID,
+                    messages=messages_arr,
+                    temperature=0.6,
+                    max_tokens=600
+                )
+                return jsonify({"answer": completion.choices[0].message.content, "source": "groq-secondary"})
+            except Exception as e:
+                print(f"Secondary Groq failed: {e}")
+
+        # 3. Ultimate Fallback: Local Ollama Model
+        try:
+            print("Falling back to local Ollama...")
+            response = requests.post(
+                "http://localhost:11434/api/chat",
+                json={
+                    "model": "llama3.2:1b",
+                    "messages": messages_arr,
+                    "stream": False
+                },
+                timeout=15 
+            )
+            response.raise_for_status()
+            data = response.json()
+            return jsonify({"answer": data['message']['content'], "source": "ollama-local"})
+        except Exception as e:
+            print(f"Ollama fallback failed: {e}")
+            return jsonify({"error": "All AI backends (Primary, Secondary, Local) failed to respond. Please try again."}), 503
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/refine-query", methods=["POST"])
 def refine_query():
     """Real-time AI query refinement (checks grammar, spelling, and sentence structure)"""

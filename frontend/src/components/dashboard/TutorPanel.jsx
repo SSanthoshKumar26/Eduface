@@ -1,228 +1,222 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Send, Sparkles, Trash2, Share2, Mic, MicOff, AudioLines, MessageSquare, Lightbulb, FileText, HelpCircle, X } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Send, Sparkles, Trash2, Share2, Mic, AudioLines,
+  MessageSquare, Lightbulb, FileText, X,
+  Brain, BookOpen
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ShareModal from './ShareModal';
+import '../../styles/TutorPanel.css';
 
-const TutorPanel = ({ messages, input, setInput, onSendMessage, isTyping, formatText, onClearChat, facePreview, onClose }) => {
+/* ─────────────────────────────────────────────────────────────────────────────
+   PURE Text-based Premium Eduface AI Chatbot (Groq powered via parent)
+   ───────────────────────────────────────────────────────────────────────────── */
+const TutorPanel = ({
+  messages, input, setInput,
+  onSendMessage, isTyping,
+  onClearChat, facePreview, onClose
+}) => {
   const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // ── Core state ──────────────────────────────────────────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
-  
-  // Voice Recording State
-  const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef(null);
 
+  // Auto-scroll inside container only to prevent page jump
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Initialize Speech Recognition
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-
-      recognitionRef.current.onresult = (event) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setInput(transcript);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error("Speech Recognition Error:", event.error);
-        setIsRecording(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-      };
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
-    
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+  }, [messages, isTyping]);
+
+  // Auto-grow textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + 'px';
+    }
+  }, [input]);
+
+  // ── Speech recognition ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = e => {
+      let t = '';
+      for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      setInput(t);
     };
+    rec.onerror = () => setIsRecording(false);
+    rec.onend = () => setIsRecording(false);
+    recognitionRef.current = rec;
+    return () => rec.stop();
   }, [setInput]);
 
   const toggleRecording = () => {
-    if (!recognitionRef.current) {
-      alert("Voice recognition is not supported in this browser.");
-      return;
-    }
+    if (!recognitionRef.current) { alert('Voice recognition not supported.'); return; }
+    if (isRecording) { recognitionRef.current.stop(); }
+    else { setInput(''); try { recognitionRef.current.start(); setIsRecording(true); } catch (e) { } }
+  };
 
-    if (isRecording) {
-      recognitionRef.current.stop();
-    } else {
-      setInput(''); // Clear input for new voice prompt
-      try {
-        recognitionRef.current.start();
-        setIsRecording(true);
-      } catch (err) {
-        console.error(err);
-      }
-    }
+  // ── Send ─────────────────────────────────────────────────────────────────────
+  const handleSend = () => {
+    if (!input.trim()) return;
+    onSendMessage(input);
+    setInput('');
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage();
+      handleSend();
     }
+  };
+
+  const shareChat = () => {
+    const text = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+    setShareUrl(text);
+    setIsShareModalOpen(true);
   };
 
   const quickActions = [
-    { id: 'explain', label: "Explain Concept", icon: <MessageSquare size={13} />, prompt: "Can you explain the main concept of this lesson in simple terms?" },
-    { id: 'summarize', label: "Summarize", icon: <FileText size={13} />, prompt: "Please provide a concise summary of this lesson." },
-    { id: 'points', label: "Key Points", icon: <Lightbulb size={13} />, prompt: "What are the key takeaways from this video?" }
+    { id: 'explain', label: 'Explain', icon: <MessageSquare size={12} />, prompt: 'Can you explain the main concept of this lesson in simple terms?' },
+    { id: 'summarize', label: 'Summarize', icon: <FileText size={12} />, prompt: 'Please provide a concise summary of this lesson.' },
+    { id: 'keypoints', label: 'Key Points', icon: <Lightbulb size={12} />, prompt: 'What are the key takeaways from this video?' },
   ];
 
-  const handleShareChat = async () => {
-    try {
-      // In production, use the actual backend URL instead of hardcoded localhost
-      const resp = await fetch('http://127.0.0.1:5000/api/share-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, visibility: 'public' })
-      });
-      const data = await resp.json();
-      if (data.success) {
-        setShareUrl(data.share_url);
-        setIsShareModalOpen(true);
-      } else {
-        alert("Failed to share chat.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Network error sharing the chat.");
-    }
-  };
-
   return (
-    <div className="ld-tutor-panel">
-      <div className="ld-tutor-header">
-        <div className="ld-tutor-title-group">
-          <div className="ld-pro-badge">
-            <Sparkles size={14} />
+    <div className="tp-root">
+      {/* HEADER */}
+      <header className="tp-header">
+        <div className="tp-header-identity">
+          <div className="tp-orb">
+            <Brain size={20} strokeWidth={1.5} />
+            <div className="tp-orb-ring"></div>
           </div>
-          <h3 className="ld-brand-title">EDUFACE AI</h3>
-          <div className="ld-session-indicator">
-            <div className="ld-status-dot"></div>
-            <span>LIVE SESSION</span>
+          <div className="tp-header-text">
+            <h2 className="tp-brand">Eduface AI</h2>
+            <p className="tp-subtitle">Intelligent Learning Assistant</p>
           </div>
         </div>
-        <div className="ld-tutor-header-actions">
-          <button className="ld-header-btn" title="Share Chat securely" onClick={handleShareChat}>
+
+        <div className="tp-status-badge">
+          <div className="tp-status-dot"></div>
+          <span>LIVE</span>
+        </div>
+
+        <div className="tp-header-actions">
+          <button className="tp-hbtn" title="Share Transcript" onClick={shareChat}>
             <Share2 size={16} />
           </button>
-          <button className="ld-header-btn" title="Clear Chat messages" onClick={onClearChat}>
+          <button className="tp-hbtn danger" title="Clear History" onClick={onClearChat}>
             <Trash2 size={16} />
           </button>
-          <div className="ld-header-divider"></div>
-          <button className="ld-chat-close-btn-header" onClick={onClose} title="Exit AI Session">
-            <X size={18} />
+          <button className="tp-hbtn" title="Close Workspace" onClick={onClose}>
+            <X size={16} />
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="ld-tutor-messages">
-        {messages.map((msg, idx) => (
-          <div 
-            key={idx} 
-            className={`ld-chat-wrapper ${msg.role === 'user' ? 'user' : 'assistant'}`}
-          >
-            {msg.role === 'assistant' && (
-              <div className="ld-chat-identity">
-                <div className="ld-ai-core-avatar">
-                  <div className="ld-ai-core-pulse"></div>
-                  <Sparkles size={12} />
-                </div>
-                <span className="ld-chat-role">EDUFACE AI</span>
-                <span className="ld-chat-verified-badge">EXPERT TUTOR</span>
+      {/* MESSAGES */}
+      <div className="tp-messages">
+        {messages.map((m, i) => (
+          <div key={i} className={`tp-bubble-row ${m.role === 'user' ? 'user' : 'assistant'}`}>
+            {m.role === 'assistant' && (
+              <div className="tp-avatar">
+                <Sparkles size={16} />
               </div>
             )}
-            <div className="ld-chat-bubble">
-              <div className="ld-chat-text">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+            <div className="tp-bubble assistant">
+              <div className="tp-bubble-header">
+                <span className="tp-bubble-name">{m.role === 'assistant' ? 'Eduface AI' : 'You'}</span>
+                <span className="tp-chip lesson">Lesson Chat</span>
+              </div>
+              <div className="tp-bubble-body">
+                <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
             </div>
           </div>
         ))}
+
         {isTyping && (
-          <div className="ld-chat-wrapper assistant">
-            <div className="ld-chat-identity">
-              <div className="ld-ai-core-avatar">
-                <div className="ld-ai-core-pulse"></div>
-                <Sparkles size={12} />
-              </div>
-              <span className="ld-chat-role">EDUFACE AI</span>
-              <span className="ld-chat-verified-badge">EXPERT TUTOR</span>
+          <div className="tp-bubble-row assistant">
+            <div className="tp-avatar">
+              <Sparkles size={16} className="tp-pulse" />
             </div>
-            <div className="ld-typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+            <div className="tp-thinking">
+              <div className="tp-thinking-orbs">
+                <span></span><span></span><span></span>
+              </div>
+              <span className="tp-thinking-label">AI is formulating response...</span>
             </div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      <ShareModal 
-        isOpen={isShareModalOpen} 
-        onClose={() => setIsShareModalOpen(false)} 
-        shareUrl={shareUrl} 
-      />
-
-      <div className="ld-tutor-footer">
-        <div className="ld-tutor-toolbar">
-          {quickActions.map((action) => (
-            <button 
+      {/* FOOTER / COMPOSER */}
+      <footer className="tp-footer">
+        <div className="tp-pills">
+          {quickActions.map(action => (
+            <button
               key={action.id}
-              onClick={() => onSendMessage(action.prompt)}
+              className="tp-pill"
               disabled={isTyping}
-              className="ld-toolbar-btn"
-              title={action.label}
+              onClick={() => onSendMessage(action.prompt)}
             >
               {action.icon}
-              <span>{action.label}</span>
+              {action.label}
             </button>
           ))}
         </div>
 
-        <div className={`ld-tutor-input-area ${isRecording ? 'recording' : ''}`}>
-          <textarea 
-            placeholder={isRecording ? "Listening..." : "Ask about this lesson, concepts, or doubts..."}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isTyping || isRecording}
-            className="ld-chat-input"
-            rows={1}
-          />
-          
-          <div className="ld-input-actions">
-            <button 
-              onClick={toggleRecording}
-              className={`ld-voice-btn ${isRecording ? 'active' : ''}`}
-              title={isRecording ? "Stop Recording" : "Start Voice Input"}
-            >
-              {isRecording ? <AudioLines size={20} className="pulse-animation" /> : <Mic size={20} />}
-            </button>
-            <button 
-              onClick={() => onSendMessage()}
-              disabled={isTyping || !input.trim() && !isRecording}
-              className="ld-chat-send"
-            >
-              <Send size={18} />
-            </button>
+        <div className="tp-composer-wrapper">
+          <div className={`tp-composer ${isRecording ? 'recording' : ''}`}>
+            <textarea
+              ref={textareaRef}
+              className="tp-composer-input"
+              placeholder="Ask about this lesson, concepts, or doubts..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+            />
+            
+            <div className="tp-composer-actions">
+              <button
+                className={`tp-composer-btn mic ${isRecording ? 'active' : ''}`}
+                onClick={toggleRecording}
+                title="Voice Input"
+              >
+                {isRecording ? <AudioLines size={18} /> : <Mic size={18} />}
+              </button>
+
+              <button
+                className="tp-composer-btn send"
+                onClick={handleSend}
+                disabled={!input.trim() || isTyping}
+                title="Send Message"
+              >
+                <Send size={18} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </footer>
+
+      {isShareModalOpen && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          shareUrl={shareUrl}
+        />
+      )}
     </div>
   );
 };

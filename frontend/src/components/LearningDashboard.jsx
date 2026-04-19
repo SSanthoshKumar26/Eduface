@@ -96,6 +96,7 @@ const LearningDashboard = ({
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
     }
+    setShowSpeedMenu(false);
   };
 
   const handleDownload = async (url, filename) => {
@@ -129,17 +130,16 @@ const LearningDashboard = ({
       fetch(scriptUrl)
         .then(res => res.ok ? res.text() : null)
         .then(t => t && setLessonContext(t))
-        .catch(() => {}); // Silent catch to prevent console noise if backend is down
+        .catch(() => {});
     }
     if (summaryUrl) {
       fetch(summaryUrl)
         .then(res => res.ok ? res.text() : null)
         .then(t => t && setLessonSummary(t))
-        .catch(() => {}); // Silent catch to prevent console noise
+        .catch(() => {});
     }
   }, [scriptUrl, summaryUrl]);
 
-  // Persistent Saved Status Check
   useEffect(() => {
     const checkSavedStatus = async () => {
       if (isSignedIn && user?.id && jobId) {
@@ -154,7 +154,7 @@ const LearningDashboard = ({
       }
     };
     checkSavedStatus();
-  }, [isSignedIn, user?.id, jobId, API_BASE_URL]);
+  }, [isSignedIn, user?.id, jobId]);
 
   const [displayTitle, setDisplayTitle] = useState(pptName || 'Educational Lesson');
 
@@ -162,14 +162,13 @@ const LearningDashboard = ({
     if (pptName) setDisplayTitle(pptName);
   }, [pptName]);
 
-  // --- AUTO PROGRESS TRACKING ---
   const storageKey = `eduface_progress_${displayTitle.replace(/\s+/g, '_').toLowerCase()}`;
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.time > 5) { // Only resume if they've watched more than 5 seconds
+      if (parsed.time > 5) {
         setSavedProgress(parsed);
         setShowResumeCard(true);
       }
@@ -233,25 +232,7 @@ const LearningDashboard = ({
     }
   }, [duration]);
 
-  // --- SUBTITLES FETCH & TRACKING ---
-  const subtitlesUrl = jobId ? `${API_BASE_URL}/api/download-video/${jobId}/subtitles` : null;
-
-  useEffect(() => {
-    if (subtitlesUrl) {
-      console.log("🔍 Fetching subtitles from:", subtitlesUrl);
-      axios.get(subtitlesUrl)
-        .then(res => {
-          if (Array.isArray(res.data)) {
-            console.log("✅ Subtitles loaded:", res.data.length, "segments");
-            setSubtitles(res.data);
-          }
-        })
-        .catch(err => {
-          console.warn("⚠️ Subtitles not found or fetch failed. Subtitles are only available for newly generated videos.", err.message);
-        });
-    }
-  }, [subtitlesUrl]);
-
+  // Subtitles fetch removed to prevent 404 empty resource errors
   useEffect(() => {
     if (showSubtitles && subtitles.length > 0) {
       const active = subtitles.find(s => currentTime >= s.start && currentTime < (s.start + s.duration));
@@ -279,7 +260,7 @@ const LearningDashboard = ({
       const response = await axios({
         url: `${API_BASE_URL}/api/export-notes`,
         method: 'POST',
-        responseType: 'blob', // crucial for file downloads
+        responseType: 'blob',
         data: {
           lesson_content: lessonContext,
           ...notesConfig
@@ -291,7 +272,6 @@ const LearningDashboard = ({
       const link = document.createElement('a');
       link.href = url;
       
-      // Determine extension from content type if backend didn't provide filename
       let extension = 'pdf';
       const contentType = response.headers['content-type'] || '';
       
@@ -299,7 +279,7 @@ const LearningDashboard = ({
       else if (contentType.includes('msword')) extension = 'doc';
       else if (contentType.includes('text/plain')) extension = 'txt';
       else if (contentType.includes('pdf')) extension = 'pdf';
-      else if (notesConfig.format === 'WORD') extension = 'docx'; // safety
+      else if (notesConfig.format === 'WORD') extension = 'docx';
       
       link.setAttribute('download', `Study_Notes_${displayTitle.replace(/\s+/g, '_')}.${extension}`);
       document.body.appendChild(link);
@@ -335,18 +315,13 @@ const LearningDashboard = ({
       });
       if (res.data.success) {
         setSavedToGallery(true);
-        toast.success('✅ Saved to My Videos Gallery!', { 
-          position: 'bottom-center', 
-          autoClose: 3000, 
-          theme: 'dark'
-        });
+        toast.success('✅ Saved to Gallery!', { position: 'bottom-center', autoClose: 3000, theme: 'dark' });
       } else {
-        toast.error(res.data.message || 'Already saved or save failed.');
+        toast.error(res.data.message || 'Save failed.');
         setSavedToGallery(true); 
       }
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to save to gallery. Please try again.');
+      toast.error('Failed to save to gallery.');
     } finally {
       setSavingToGallery(false);
     }
@@ -356,7 +331,8 @@ const LearningDashboard = ({
     const userInput = text || chatInput;
     if (!userInput.trim()) return;
 
-    const userMessage = { role: 'user', content: userInput };
+    const ts = Date.now();
+    const userMessage = { role: 'user', content: userInput, _ts: ts };
     const initialMessages = [...messages, userMessage];
     
     setMessages(initialMessages);
@@ -364,63 +340,47 @@ const LearningDashboard = ({
     setIsTyping(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      const response = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          messages: [{ role: 'system', content: `Context: ${lessonContext}` }, ...initialMessages]
+          messages: [
+            { 
+              role: 'system', 
+              content: `You are Eduface AI, an elite educational tutor created strictly by Eduface. You MUST NEVER say you are a generic AI, nor mention OpenAI, Llama, Meta, Groq, or any other creator. Your name is exclusively "Eduface AI".
+              Context about this lesson: ${lessonContext}. 
+              IMPORTANT RULES:
+              1. Adapt to the user's tone and length. 
+              2. If the user asks a complex question about the lesson, provide a clear, professional, and deep explanation.
+              3. If the user is just saying hello, making small talk (e.g., "nice to meet you"), or making a brief comment, BE VERY CONCISE. Do NOT write paragraphs, do NOT over-explain, and do NOT force the conversation back to the lesson abruptly. Keep casual responses short, natural, and friendly.` 
+            },
+            ...initialMessages.map(m => ({ role: m.role, content: m.content }))
+          ]
         })
       });
 
-      if (!response.ok) throw new Error("Chat fetch failed");
+      if (!response.ok) throw new Error("Backend chat API failed");
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = "";
-      
-      // Add initial empty assistant message to avoid layout jump
-      setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
-      setIsTyping(false); // Stop typing indicator once stream starts
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim();
-            if (dataStr === '[DONE]') break;
-            
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.content) {
-                assistantContent += data.content;
-                // Update ONLY the last message (the assistant's content)
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { 
-                    role: 'assistant', 
-                    content: assistantContent 
-                  };
-                  return updated;
-                });
-              }
-            } catch (e) {
-              console.warn("Error parsing stream chunk", e);
-            }
-          }
-        }
-      }
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.answer,
+        _ts: Date.now()
+      }]);
     } catch (e) {
-      console.error("Streaming Error:", e);
+      console.error("Chat error:", e);
       setIsTyping(false);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: "I encountered an error connecting to the AI. Please check your connection." 
+        content: "I encountered an error connecting to the AI. Please try again later.",
+        _ts: Date.now()
       }]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -467,9 +427,6 @@ const LearningDashboard = ({
 
   return (
     <div className="ld-dashboard-root">
-      {/* Header */}
-      {/* Removed ld-header as per user request */}
-
       {/* Immersive Viewport Wrapper */}
       <main className={`ld-immersive-viewport ${isChatOpen ? 'chat-active' : ''}`}>
         
@@ -491,7 +448,7 @@ const LearningDashboard = ({
 
           <section className="ld-content-area">
             
-            {/* Video Unit - ONLY show if not collapsed/minimized */}
+            {/* Video Unit */}
             {isMinimized ? (
               <div className="ld-minimized-placeholder-card" onClick={() => setIsMinimized(false)}>
                 <div className="ld-minimized-info">
@@ -547,11 +504,10 @@ const LearningDashboard = ({
                         <div className="ld-resume-overlay">
                           <div className="ld-resume-card">
                             <div className="ld-resume-info">
-                              <Clock size={24} className="resume-icon" />
+                              <Clock size={20} className="resume-icon" />
                               <div>
-                                <h4>Continue Learning?</h4>
-                                <p>You were watching: <strong>{activeChapter?.label || 'Introduction'}</strong></p>
-                                <p className="resume-sub-text">Progress: {Math.round(savedProgress?.percent || 0)}% completed</p>
+                                <h4>Ready to Resume?</h4>
+                                <p className="resume-sub-text">{activeChapter?.label || 'Introduction'} • {Math.round(savedProgress?.percent || 0)}%</p>
                               </div>
                             </div>
                             <div className="ld-resume-actions">
@@ -561,7 +517,6 @@ const LearningDashboard = ({
                               <button className="resume-btn secondary" onClick={handleStartFresh}>
                                 Start Over
                               </button>
-                              
                               {fromGallery && (
                                 <button className="resume-btn minimal" onClick={resetForm}>
                                   <ChevronRight size={14} /> Back to Library
@@ -573,87 +528,75 @@ const LearningDashboard = ({
                       )}
 
                       <div className={`ld-custom-controls ${!isPlaying || isHoveringVideo ? 'visible' : ''}`}>
+                         <div className="ld-controls-main">
+                            <div className="ld-controls-left">
+                              <button className="ld-control-btn" onClick={togglePlay}>
+                                {isPlaying ? <Pause size={20} fill="currentColor" strokeWidth={3} /> : <PlayIcon size={20} fill="currentColor" strokeWidth={3} />}
+                              </button>
+                              <div className="ld-time-pill">
+                                {formatTime(currentTime)} <span className="ld-time-sep">/</span> {formatTime(duration)}
+                              </div>
+                            </div>
+
+                            <div className="ld-controls-right">
+                               <div className="ld-vol-group">
+                                 <button className="ld-control-btn" onClick={toggleMute}>
+                                   {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                 </button>
+                                 <input type="range" min="0" max="1" step="0.05" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="ld-v-slider" />
+                               </div>
+                               
+                               <div className="ld-player-settings-box">
+                                 <button className="ld-control-btn" onClick={() => setShowSpeedMenu(!showSpeedMenu)} title="Playback Settings">
+                                   <Settings size={18} />
+                                 </button>
+
+                                 {showSpeedMenu && (
+                                    <div className="ld-premium-speed-popover">
+                                      <div className="ld-popover-header">Speed</div>
+                                      {[1.0, 1.25, 1.5, 2.0].map(val => (
+                                        <button 
+                                          key={val}
+                                          className={`ld-popover-item ${playbackRate === val ? 'active' : ''}`}
+                                          onClick={() => handleSpeedChange(val)}
+                                        >
+                                          <span>{val === 1.0 ? 'Normal' : `${val}x`}</span>
+                                          {playbackRate === val && <CheckCircle2 size={14} className="check-icon" />}
+                                        </button>
+                                      ))}
+                                    </div>
+                                 )}
+                               </div>
+
+                               <button className="ld-control-btn" onClick={() => videoRef.current.requestFullscreen()} title="Full Screen">
+                                 <Maximize size={18} />
+                               </button>
+                            </div>
+                         </div>
+
                          <div 
-                           className="ld-progress-bar-container" 
+                           className="ld-modern-progress-wrap" 
                            onClick={handleProgressClick}
                            onMouseMove={handleProgressMouseMove}
                            onMouseLeave={handleProgressMouseLeave}
                          >
-                            {hoverTime !== null && (
-                              <div className="ld-progress-hover-preview" style={{ left: `${hoverX}px` }}>
-                                {formatTime(hoverTime)}
+                            <div className="ld-modern-rail">
+                              <div className="ld-modern-fill" style={{ width: `${(currentTime/duration)*100}%` }}>
+                                <div className="ld-modern-knob" />
                               </div>
-                            )}
-                            <div className="ld-progress-rail">
-                              <div className="ld-progress-fill" style={{ width: `${(currentTime/duration)*100}%` }}>
-                                <div className="ld-progress-knob" />
-                              </div>
-                              {/* Slide Markers */}
-                              {chapters.map((chap, i) => (
+                               {chapters.map((chap, i) => (
                                 <div 
                                   key={i} 
-                                  className={`ld-slide-marker ${currentTime >= chap.time ? 'completed' : ''}`}
+                                  className={`ld-modern-marker ${currentTime >= chap.time ? 'on' : ''}`}
                                   style={{ left: `${chap.percent}%` }}
                                 />
                               ))}
                             </div>
-                         </div>
-                         <div className="ld-controls-main">
-                            <div className="ld-controls-left">
-                              <button className="ld-control-btn main-play" onClick={togglePlay}>
-                                {isPlaying ? <Pause size={24} fill="white" stroke="none" /> : <PlayIcon size={24} fill="white" stroke="none" />}
-                              </button>
-                              <div className="ld-volume-group">
-                                <button className="ld-control-btn" onClick={toggleMute}>
-                                  {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                                </button>
-                                <input type="range" min="0" max="1" step="0.1" value={volume} onChange={handleVolumeChange} className="ld-volume-slider" />
+                            {hoverTime !== null && (
+                              <div className="ld-modern-tooltip" style={{ left: `${hoverX}px` }}>
+                                {formatTime(hoverTime)}
                               </div>
-                              <div className="ld-time-pill">
-                                {formatTime(currentTime)} / {formatTime(duration)}
-                              </div>
-                            </div>
-                            <div className="ld-controls-right">
-                              <div className="ld-speed-control-container">
-                                <button className="ld-control-btn secondary-btn" onClick={() => setShowSpeedMenu(!showSpeedMenu)} title="Playback Speed">
-                                  <Settings size={20} />
-                                </button>
-                                {showSpeedMenu && (
-                                  <div className="ld-speed-menu">
-                                    <div className="ld-speed-header">
-                                      <span onClick={() => setShowSpeedMenu(false)}><ChevronRight size={16} style={{transform: 'rotate(180deg)', cursor: 'pointer'}}/></span>
-                                      <span>Playback speed</span>
-                                    </div>
-                                    <div className="ld-speed-slider-area">
-                                      <button className="ld-speed-adj-btn" onClick={() => handleSpeedChange(Math.max(0.25, playbackRate - 0.25))}>-</button>
-                                      <input 
-                                        type="range" 
-                                        min="0.25" max="3" step="0.05" 
-                                        value={playbackRate} 
-                                        onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-                                        className="ld-speed-slider" 
-                                      />
-                                      <button className="ld-speed-adj-btn" onClick={() => handleSpeedChange(Math.min(3, playbackRate + 0.25))}>+</button>
-                                    </div>
-                                    <div className="ld-speed-current-val">{playbackRate.toFixed(2)}x</div>
-                                    <div className="ld-speed-pills">
-                                      {[1.0, 1.25, 1.5, 2.0, 3.0].map(speed => (
-                                        <button 
-                                          key={speed} 
-                                          className={`ld-speed-pill ${playbackRate === speed ? 'active' : ''}`}
-                                          onClick={() => handleSpeedChange(speed)}
-                                        >
-                                          {speed}x
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              <button className="ld-control-btn secondary-btn" onClick={() => videoRef.current.requestFullscreen()} title="Full Screen">
-                                <Maximize2 size={22} />
-                              </button>
-                            </div>
+                            )}
                          </div>
                       </div>
                     </>
@@ -683,77 +626,71 @@ const LearningDashboard = ({
             </div>
 
             <div className="ld-below-video-content">
-               <div className="ld-action-bar-single">
-                   <button onClick={() => handleDownload(videoUrl, `eduface_${jobId}_video.mp4`)} className="ld-btn premium-save">
-                     <Download size={18} /> Download Video
+               <div className="ld-resource-grid-header">
+                  <h3>Learning Insights & Resources</h3>
+                  <p>Explore generated assets and AI-powered study upgrades.</p>
+               </div>
+
+               <div className="ld-resource-mosaic">
+                 <div className="ld-mosaic-item" onClick={() => handleDownload(videoUrl, `eduface_lesson.mp4`)}>
+                    <div className="mosaic-icon bg-blue"><Download size={20} /></div>
+                    <div className="mosaic-text">
+                       <h4>Offline Lesson</h4>
+                       <p>High-quality MP4 including AI narrator and slides.</p>
+                    </div>
+                 </div>
+
+                 <div className="ld-mosaic-item" onClick={() => setShowNotesModal(true)}>
+                    <div className="mosaic-icon bg-purple"><BookOpen size={20} /></div>
+                    <div className="mosaic-text">
+                       <h4>Academic Guide</h4>
+                       <p>Synthesize detailed notes from the lecture script.</p>
+                    </div>
+                 </div>
+
+                 <div className="ld-mosaic-item" onClick={() => navigate('/quiz/setup', { state: { lessonContent: lessonContext } })}>
+                    <div className="mosaic-icon bg-cyan"><Sparkles size={20} /></div>
+                    <div className="mosaic-text">
+                       <h4>Skill Validation</h4>
+                       <p>Take an AI-generated quiz to test your retention.</p>
+                    </div>
+                 </div>
+
+                 <div className="ld-mosaic-item" onClick={() => navigate(`/thinking-mode/${jobId || 'new'}`)}>
+                    <div className="mosaic-icon bg-indigo"><Layers size={20} /></div>
+                    <div className="mosaic-text">
+                       <h4>Thinking Coach</h4>
+                       <p>Interactive dialog with your AI tutor about concepts.</p>
+                    </div>
+                 </div>
+               </div>
+
+               <div className="ld-action-bar-single" style={{ marginTop: '12px' }}>
+                   <button onClick={() => handleDownload(audioUrl, `audio.wav`)} className="ld-btn-minimal">
+                     <Mic2 size={16} /> Download Master Audio
                    </button>
- 
-                   <button onClick={() => handleDownload(audioUrl, `eduface_${jobId}_audio.wav`)} className="ld-btn premium-audio">
-                     <Mic2 size={18} /> Download Audio
-                   </button>
-                   
                    {!fromGallery && (
                      <button 
                        onClick={savedToGallery ? () => navigate('/video-gallery') : handleSaveToGallery} 
                        disabled={savingToGallery}
-                       className="ld-btn premium-gallery-save"
-                       style={{
-                          background: savedToGallery ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                          color: '#fff', border: 'none'
-                       }}
+                       className="ld-btn-minimal"
                      >
-                       {savedToGallery ? <><CheckCircle2 size={18} /> Go to Gallery</> : savingToGallery ? <><RefreshCcw className="ld-spin" size={18} /> Saving...</> : <><PlusCircle size={18} /> Save to My Gallery</>}
+                       {savedToGallery ? <><CheckCircle2 size={16} /> Saved to Library</> : <><PlusCircle size={16} /> Save to My Gallery</>}
                      </button>
                    )}
- 
-                    <button 
-                     onClick={() => navigate(`/thinking-mode/${jobId || 'new'}`)}
-                     className="ld-btn premium-thinking-coach"
-                   >
-                     AI Thinking Coach
-                   </button>
                 </div>
 
-              <div className="ld-overview-card">
-                 <h3><Lightbulb size={20} className="card-icon"/> Lesson Overview</h3>
-                 <div className="ld-overview-text">
-                    {lessonSummary || "Processing lesson context..."}
-                 </div>
-              </div>
-
-              {/* Elite Study Notes Card — Premium 3-col grid */}
-              <div className="ld-notes-cta-card">
-                <div className="cta-icon-box notes-bg">
-                  <BookOpen size={22} />
-                </div>
-                <div className="cta-content">
-                  <h4>Professional Study Guide</h4>
-                  <p>Transform this lesson into AI-generated, export-ready academic notes.</p>
-                </div>
-                <button
-                  className="ld-notes-generate-btn"
-                  onClick={() => setShowNotesModal(true)}
-                  disabled={generatingNotes || !lessonContext}
-                >
-                  {generatingNotes ? <><RefreshCcw className="ld-spin" size={14} /> Exporting...</> : "Customize & Export"}
-                </button>
-              </div>
-
-               <div className="ld-quiz-cta-card" onClick={() => navigate('/quiz/setup', { state: { lessonContent: lessonContext } })}>
-                  <div className="cta-icon-box">
-                     <Sparkles size={20} color="#0ea5e9" />
+               <div className="ld-overview-card">
+                  <h3><Lightbulb size={20} className="card-icon"/> Executive Summary</h3>
+                  <div className="ld-overview-text">
+                     {lessonSummary || "The AI is summarizing the core takeaways of this lesson..."}
                   </div>
-                  <div className="cta-content">
-                     <h4>Master this Lesson with a Quiz</h4>
-                     <p>Eduface AI will analyze the script and generate a personalized test just for you.</p>
-                  </div>
-                  <ChevronRight size={18} className="cta-arrow" />
                </div>
             </div>
           </section>
         </div>
 
-        {/* CHAT OVERLAY PANEL: Slides from right */}
+        {/* CHAT OVERLAY PANEL */}
         <section className={`ld-chat-overlay-panel ${isChatOpen ? 'open' : ''}`}>
           <div className="ld-chat-container immersive-chat">
             <TutorPanel 
@@ -765,10 +702,8 @@ const LearningDashboard = ({
             />
           </div>
         </section>
-
       </main>
 
-      {/* Floating Toggle for optional chat */}
       {!isChatOpen && (
         <button className="ld-chat-toggle-fab" onClick={() => setIsChatOpen(true)}>
           <Sparkles size={20} />
@@ -776,21 +711,16 @@ const LearningDashboard = ({
         </button>
       )}
 
-      {/* Notes Setup Modal Overlay - Moved to root for better positioning */}
       {showNotesModal && (
         <div className="ld-modal-overlay">
           <div className="ld-study-modal-premium">
             <div className="modal-sidebar">
-              <div className="sidebar-icon">
-                <BookOpen size={48} strokeWidth={1} />
-              </div>
+              <div className="sidebar-icon"><BookOpen size={48} strokeWidth={1} /></div>
               <div className="sidebar-text">
                 <h3>Elite Guide</h3>
                 <p>Tailor your academic material for professional retention.</p>
               </div>
-              <div className="sidebar-footer">
-                <span className="premium-badge">PRO GRADE</span>
-              </div>
+              <div className="sidebar-footer"><span className="premium-badge">PRO GRADE</span></div>
             </div>
 
             <div className="modal-main">
