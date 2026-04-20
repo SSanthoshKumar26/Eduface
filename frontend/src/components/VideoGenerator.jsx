@@ -21,7 +21,9 @@ import {
   Volume2,
   Trash2,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import LearningDashboard from './LearningDashboard';
 import '../styles/VideoGenerator.css';
@@ -499,6 +501,57 @@ const VideoGenerator = () => {
     progressPercent >= stage.threshold ? i : idx, 0
   );
 
+  // --- CUSTOM SELECT COMPONENT ---
+  const PremiumSelect = ({ label, value, options, onChange, icon: Icon }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = React.useRef(null);
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (containerRef.current && !containerRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedOption = options.find(opt => opt.id === value) || options[0] || { name: 'Select...' };
+
+    return (
+      <div className="vg-form-group">
+        <label className="vg-label">
+          {Icon && <Icon size={16} className="text-cyan-400 mr-2" />}
+          {label}
+        </label>
+        <div className={`vg-custom-select-container ${isOpen ? 'open' : ''}`} ref={containerRef}>
+          <div 
+            className={`vg-custom-select-trigger ${isOpen ? 'active' : ''}`}
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <span>{selectedOption?.name || 'Select...'}</span>
+            <ChevronDown size={18} className="vg-custom-select-arrow" />
+          </div>
+          <div className="vg-custom-select-menu">
+            {options.map((opt) => (
+              <div 
+                key={opt.id} 
+                className={`vg-custom-option ${value === opt.id ? 'selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.id);
+                  setIsOpen(false);
+                }}
+              >
+                <span>{opt.name}</span>
+                {value === opt.id && <Check size={14} className="vg-custom-option-check" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (!isLoaded) {
     return (
       <div className="vg-root-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -715,51 +768,46 @@ const VideoGenerator = () => {
                 <div className="vg-glass-card vg-card">
                   <div className="vg-card-header"><h2>Step 2: Configuration</h2></div>
                   <div className="vg-card-body">
-                    <div className="vg-form-group">
-                      <label className="vg-label">
-                        <Volume2 size={16} className="text-cyan-400 mr-2" />
-                        AI Voice Persona
-                      </label>
-                      <select className="vg-cyber-input" value={selectedVoice} onChange={(e) => {
-                        const vid = e.target.value;
+                    <PremiumSelect 
+                      label="AI Voice Persona"
+                      icon={Volume2}
+                      value={selectedVoice}
+                      options={voices}
+                      onChange={(vid) => {
                         setSelectedVoice(vid);
                         if (vid.startsWith('edge_')) setTtsEngine('edge');
                         else if (vid.startsWith('elevenlabs_')) setTtsEngine('elevenlabs');
                         else if (vid.startsWith('gtts_')) setTtsEngine('gtts');
                         else if (vid.startsWith('pyttsx3_')) setTtsEngine('pyttsx3');
-                      }}>
-                        {voices.map(v => (
-                          <option key={v.id} value={v.id}>
-                            {v.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                      }}
+                    />
 
-                    <div className="vg-form-group">
-                      <label className="vg-label">
-                        <Sparkles size={16} className="text-cyan-400 mr-2" />
-                        Educational Tone
-                      </label>
-                      <select className="vg-cyber-input" value={slangLevel} onChange={(e) => setSlangLevel(e.target.value)}>
-                        <option value="none">Professional (Formal)</option>
-                        <option value="medium">Conversational (Engaging)</option>
-                        <option value="high">Dynamic (Interactive)</option>
-                      </select>
-                    </div>
+                    <PremiumSelect 
+                      label="Educational Tone"
+                      icon={Sparkles}
+                      value={slangLevel}
+                      options={[
+                        { id: 'none', name: 'Professional (Formal)' },
+                        { id: 'medium', name: 'Conversational (Engaging)' },
+                        { id: 'high', name: 'Dynamic (Interactive)' }
+                      ]}
+                      onChange={setSlangLevel}
+                    />
 
-                    <div className="vg-form-group">
-                      <label className="vg-label">
-                        <Zap size={16} className="text-cyan-400 mr-2" />
-                        Video Quality
-                      </label>
-                      <select className="vg-cyber-input" value={quality} onChange={(e) => setQuality(e.target.value)}>
-                        <option value="low">Standard (Fast Processing)</option>
-                        <option value="medium">High Definition (Balanced)</option>
-                        <option value="high">Ultra High (Neural Rendering)</option>
-                      </select>
-                      <small className="vg-form-help">Determines the AI's render resolution and facial consistency.</small>
-                    </div>
+                    <PremiumSelect 
+                      label="Video Quality"
+                      icon={Zap}
+                      value={quality}
+                      options={[
+                        { id: 'low', name: 'Standard (Fast Processing)' },
+                        { id: 'medium', name: 'High Definition (Balanced)' },
+                        { id: 'high', name: 'Ultra High (Neural Rendering)' }
+                      ]}
+                      onChange={setQuality}
+                    />
+                    <small className="vg-form-help" style={{ marginTop: '-12px', display: 'block', marginBottom: '20px' }}>
+                      Determines the AI's render resolution and facial consistency.
+                    </small>
 
                     {/* Dynamic Strategy Summary to fill the gap */}
                     <div className="vg-strategy-summary">

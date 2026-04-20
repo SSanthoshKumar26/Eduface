@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Brain, Flame, Target, Zap, Activity, Search, ClipboardList, Timer, CheckCircle2, AlertTriangle, Wrench, Trophy, RefreshCcw, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import '../styles/ThinkingMode.css';
@@ -127,27 +127,42 @@ export default function ThinkingMode() {
   }, []);
 
   // ─── Phase-based buddy appearances ────────────────────────────
+  const location = useLocation();
+
   useEffect(() => {
     const savedStreak = localStorage.getItem('eduface_thinking_streak') || 4;
     setStreak(parseInt(savedStreak));
 
     const loadContext = async () => {
+      // Prioritize context passed explicitly via React Router state
+      if (location.state?.lessonContent) {
+        setLessonContext(location.state.lessonContent);
+        return;
+      }
+
       let context = "";
+      let title = location.state?.lessonTitle || "";
+      
       const savedSession = localStorage.getItem('eduface_video_session');
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession);
+          title = session.title || title;
           if (session.scriptUrl) {
             const res = await fetch(session.scriptUrl);
             context = await res.text();
           } else if (session.transcript) context = session.transcript;
         } catch (e) {}
       }
-      if (!context) context = "Computer networking, architecture, and system design.";
+      
+      // Dynamic fallback to the title or a generic software engineering concept
+      if (!context) {
+        context = title ? `The core topic of this lesson is: ${title}. Analyze and test knowledge on ${title}.` : "Advanced Software Engineering and System Design";
+      }
       setLessonContext(context);
     };
     loadContext();
-  }, [videoId]);
+  }, [videoId, location.state]);
 
   // Show welcome buddy on selection phase
   useEffect(() => {

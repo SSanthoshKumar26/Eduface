@@ -626,9 +626,26 @@ const LearningDashboard = ({
             </div>
 
             <div className="ld-below-video-content">
-               <div className="ld-resource-grid-header">
-                  <h3>Learning Insights & Resources</h3>
-                  <p>Explore generated assets and AI-powered study upgrades.</p>
+               <div className="ld-resource-grid-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3>Learning Insights & Resources</h3>
+                    <p>Explore generated assets and AI-powered study upgrades.</p>
+                  </div>
+                  <div className="ld-premium-header-action">
+                    {fromGallery ? (
+                      <button className="ld-btn-secondary" onClick={() => navigate('/video-gallery')}>
+                         <Layers size={16} /> Return to Library
+                      </button>
+                    ) : (
+                      <button 
+                        className={`ld-btn-primary ${savingToGallery ? 'disabled' : ''}`}
+                        onClick={savedToGallery ? () => navigate('/video-gallery') : handleSaveToGallery}
+                        disabled={savingToGallery}
+                      >
+                         {savedToGallery ? <><CheckCircle2 size={16} /> Saved to Library</> : <><PlusCircle size={16} /> Save Lesson</>}
+                      </button>
+                    )}
+                  </div>
                </div>
 
                <div className="ld-resource-mosaic">
@@ -656,29 +673,23 @@ const LearningDashboard = ({
                     </div>
                  </div>
 
-                 <div className="ld-mosaic-item" onClick={() => navigate(`/thinking-mode/${jobId || 'new'}`)}>
+                 <div className="ld-mosaic-item" onClick={() => navigate(`/thinking-mode/${jobId || 'new'}`, { state: { lessonContent: lessonContext, lessonTitle: displayTitle } })}>
                     <div className="mosaic-icon bg-indigo"><Layers size={20} /></div>
                     <div className="mosaic-text">
                        <h4>Thinking Coach</h4>
                        <p>Interactive dialog with your AI tutor about concepts.</p>
                     </div>
                  </div>
-               </div>
 
-               <div className="ld-action-bar-single" style={{ marginTop: '12px' }}>
-                   <button onClick={() => handleDownload(audioUrl, `audio.wav`)} className="ld-btn-minimal">
-                     <Mic2 size={16} /> Download Master Audio
-                   </button>
-                   {!fromGallery && (
-                     <button 
-                       onClick={savedToGallery ? () => navigate('/video-gallery') : handleSaveToGallery} 
-                       disabled={savingToGallery}
-                       className="ld-btn-minimal"
-                     >
-                       {savedToGallery ? <><CheckCircle2 size={16} /> Saved to Library</> : <><PlusCircle size={16} /> Save to My Gallery</>}
-                     </button>
-                   )}
-                </div>
+                 <div className="ld-mosaic-item" onClick={() => handleDownload(audioUrl, `audio.wav`)}>
+                    <div className="mosaic-icon bg-amber"><Mic2 size={20} /></div>
+                    <div className="mosaic-text">
+                       <h4>Master Audio</h4>
+                       <p>Download the high-fidelity AI-voice track.</p>
+                    </div>
+                 </div>
+
+               </div>
 
                <div className="ld-overview-card">
                   <h3><Lightbulb size={20} className="card-icon"/> Executive Summary</h3>
