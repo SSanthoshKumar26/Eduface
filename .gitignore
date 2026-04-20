@@ -1,28 +1,68 @@
-# Environment variables (CRITICAL SECURITY)
+# ==============================
+# 🔐 Environment Variables
+# ==============================
 .env
 .env.local
 .env.*.local
 
-# EduFace specific (VERY IMPORTANT)
-# Uploads (ROOT LEVEL)
-uploads/
+# ==============================
+# 🐍 Python / Backend
+# ==============================
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
+# ==============================
+# 📦 Node / Frontend
+# ==============================
+node_modules/
+dist/
+build/
+
+# ==============================
+# 📁 Uploads & Generated Files
+# ==============================
+uploads/
+backend/uploads/
 backend/uploads/outputs/
-backend/uploads/*
 outputs/
 temp/
 tmp/
 cache/
 
-# Generated scripts / AI outputs
-*.txt
-!backend/requirements.txt
-*.json
+# ==============================
+# 🤖 AI / Model Files
+# ==============================
+backend/Wav2Lip/
+*.pt
+*.pth
+*.onnx
 
-# Prevent accidental large files
+# ==============================
+# 📄 Generated Content
+# ==============================
+*.txt
+
+# ⚠️ IMPORTANT: allow required JSON files
+!frontend/package.json
+!backend/package.json
+
+# ==============================
+# 📦 Archives & Large Files
+# ==============================
 *.zip
 *.tar
 *.gz
 
-*.exe
-backend/Wav2Lip/
+# ==============================
+# ⚙️ System Files
+# ==============================
+.DS_Store
+Thumbs.db
+
+# ==============================
+# 🧪 Logs
+# ==============================
+*.log
